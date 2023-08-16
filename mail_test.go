@@ -20,6 +20,6 @@ func TestSend(t *testing.T) {
 	msg.SetSubject("tinymail")
 	msg.SetCC("tester.mister@testing.com")
 	msg.SetBCC("tester.mister@testing.com")
-	err := mailer.SetMessage(*msg).Send()
+	err := mailer.SetMessage(msg).Send()
 	assert.NoError(err, "error while sending email")
 }

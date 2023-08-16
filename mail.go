@@ -23,7 +23,7 @@ type smtpConfig struct {
 }
 
 type mail struct {
-	message message
+	message Message
 	config  *smtpConfig
 }
 
@@ -44,7 +44,7 @@ func (m *mail) Send() error {
 	return smtp.SendMail(m.config.addr, m.config.auth, m.config.user, m.message.To(), m.writeMessage())
 }
 
-func (m *mail) SetMessage(msg message) *mail {
+func (m *mail) SetMessage(msg Message) *mail {
 	m.message = msg
 	return m
 }
