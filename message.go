@@ -8,15 +8,19 @@ import (
 )
 
 type Message interface {
-	FromText(text string) *message
-	FromTemplateString(tpl string) *message
-	FromTemplateFile(file string) *message
 	SetFrom(from string)
-	SetTo(to []string)
-	SetCC(cc []string)
-	SetBCC(bcc []string)
+	From() string
+	SetTo(to ...string)
+	To() []string
+	SetCC(cc ...string)
+	CC() []string
+	SetBCC(bcc ...string)
+	BCC() []string
 	SetSubject(s string)
-	Attach(files []string)
+	Subject() string
+	Attach(files ...string) error
+	Attachments() map[string][]byte
+	Body() string
 }
 type message struct {
 	from        string
