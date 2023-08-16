@@ -1,4 +1,4 @@
-package mail
+package tinymail
 
 import (
 	"bytes"
@@ -67,7 +67,7 @@ func (m *message) Subject() string {
 	return m.subject
 }
 
-func (m *message) Attach(files []string) error {
+func (m *message) Attach(files ...string) error {
 	for _, file := range files {
 		b, err := os.ReadFile(file)
 		if err != nil {
