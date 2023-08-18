@@ -21,6 +21,10 @@ type Message interface {
 	Attach(files ...string) error
 	Attachments() map[string][]byte
 	Body() string
+	SetUrgentPriority()
+	SetNonUrgentPriority()
+	SetNormalPriority()
+	Priority() string
 }
 type message struct {
 	from        string
@@ -29,6 +33,7 @@ type message struct {
 	bcc         []string
 	subject     string
 	body        string
+	priority    string
 	attachments map[string][]byte
 }
 
@@ -90,6 +95,22 @@ func (m *message) Attachments() map[string][]byte {
 
 func (m *message) Body() string {
 	return m.body
+}
+
+func (m *message) SetNormalPriority() {
+	m.priority = "normal"
+}
+
+func (m *message) SetUrgentPriority() {
+	m.priority = "urgent"
+}
+
+func (m *message) SetNonUrgentPriority() {
+	m.priority = "non-urgent"
+}
+
+func (m *message) Priority() string {
+	return m.priority
 }
 
 func FromText(text string) *message {
