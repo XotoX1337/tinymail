@@ -1,3 +1,5 @@
+// Package tinymail provides a simple and easy to use interface
+// to send smtp emails.
 package tinymail
 
 import (
@@ -22,12 +24,12 @@ type smtpConfig struct {
 	addr     string
 }
 
-type mail struct {
+type mailer struct {
 	message Message
 	config  *smtpConfig
 }
 
-func New(user, password, host string) *mail {
+func New(user, password, host string) *mailer {
 	c := &smtpConfig{
 		user:     user,
 		password: password,
@@ -35,21 +37,21 @@ func New(user, password, host string) *mail {
 		addr:     fmt.Sprintf("%s:%d", host, 587),
 	}
 	c.auth = smtp.PlainAuth("", c.user, c.password, c.host)
-	m := &mail{
+	m := &mailer{
 		config: c,
 	}
 	return m
 }
-func (m *mail) Send() error {
+func (m *mailer) Send() error {
 	return smtp.SendMail(m.config.addr, m.config.auth, m.config.user, m.message.To(), m.writeMessage())
 }
 
-func (m *mail) SetMessage(msg Message) *mail {
+func (m *mailer) SetMessage(msg Message) *mailer {
 	m.message = msg
 	return m
 }
 
-func (m *mail) writeMessage() []byte {
+func (m *mailer) writeMessage() []byte {
 	msg := m.message
 	buf := bytes.NewBuffer(nil)
 	buf.WriteString("MIME-Version: 1.0\n")
@@ -63,6 +65,9 @@ func (m *mail) writeMessage() []byte {
 
 	if len(msg.BCC()) > 0 {
 		buf.WriteString(fmt.Sprintf("Bcc: %s\n", strings.Join(msg.BCC(), ",")))
+	}
+	if len(msg.Priority()) > 0 {
+		buf.WriteString(fmt.Sprintf("Priority: %s\n", msg.Priority()))
 	}
 
 	writer := multipart.NewWriter(buf)
