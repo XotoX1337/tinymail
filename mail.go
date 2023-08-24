@@ -14,6 +14,8 @@ import (
 
 type Mailer interface {
 	Send() error
+	SetBoundary(boundary string)
+	Boundary() string
 }
 
 type smtpConfig struct {
@@ -25,8 +27,9 @@ type smtpConfig struct {
 }
 
 type mailer struct {
-	message Message
-	config  *smtpConfig
+	message  Message
+	boundary string
+	config   *smtpConfig
 }
 
 func New(user, password, host string) *mailer {
@@ -51,6 +54,15 @@ func (m *mailer) SetMessage(msg Message) *mailer {
 	return m
 }
 
+func (m *mailer) SetBoundary(boundary string) *mailer {
+	m.boundary = boundary
+	return m
+}
+
+func (m *mailer) Boundary() string {
+	return m.boundary
+}
+
 func (m *mailer) writeMessage() []byte {
 	msg := m.message
 	buf := bytes.NewBuffer(nil)
@@ -71,7 +83,13 @@ func (m *mailer) writeMessage() []byte {
 	}
 
 	writer := multipart.NewWriter(buf)
-	boundary := writer.Boundary()
+	var boundary string
+	if len(m.boundary) > 0 {
+		boundary = m.boundary
+	} else {
+		boundary = writer.Boundary()
+	}
+
 	if withAttachments {
 		buf.WriteString(fmt.Sprintf("Content-Type: multipart/mixed;\n boundary=%s\n\n", boundary))
 		buf.WriteString(fmt.Sprintf("--%s\n", boundary))
