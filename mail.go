@@ -63,6 +63,18 @@ func (m *mailer) Boundary() string {
 	return m.boundary
 }
 
+// chunk e mail into parts of 998 characters due to
+// RFC5322 2.1.1 Line Length Limits
+func (m *mailer) chunkMessage(message string) string {
+	var chunks []string
+	for len(message) > 998 {
+		chunks = append(chunks, message[:998])
+		message = message[998:]
+	}
+	chunks = append(chunks, message)
+	return strings.Join(chunks, "\n")
+}
+
 func (m *mailer) writeMessage() []byte {
 	msg := m.message
 	buf := bytes.NewBuffer(nil)
@@ -113,5 +125,5 @@ func (m *mailer) writeMessage() []byte {
 		buf.WriteString("--")
 	}
 
-	return buf.Bytes()
+	return []byte(m.chunkMessage(buf.String()))
 }
