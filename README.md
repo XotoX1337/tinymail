@@ -20,8 +20,10 @@ go get github.com/XotoX1337/tinymail
 
 ### Text Email
 ```go
-mailer := New(user, password, host)
-msg := FromText("this is a example")
+import "github.com/XotoX1337/tinymail"
+
+mailer := tinymail.New(user, password, host)
+msg := tinymail.FromText("this is a example")
 msg.SetFrom("test@tinymail.test")
 msg.SetTo("test.to@tinymail.test")
 msg.SetSubject("TestWriteMessage")
@@ -34,8 +36,10 @@ if err != nil {
 
 ### Email from Template
 ```go
-mailer := New(user, password, host)
-msg := FromTemplateFile(path/to/template/file)
+import "github.com/XotoX1337/tinymail"
+
+mailer := tinymail.New(user, password, host)
+msg := tinymail.FromTemplateFile(path/to/template/file)
 msg.SetFrom("test@tinymail.test")
 msg.SetTo("test.to@tinymail.test")
 msg.SetSubject("TestWriteMessage")
@@ -48,8 +52,10 @@ if err != nil {
 
 ### Email with Attachments
 ```go
-mailer := New(user, password, host)
-msg := FromText("attachment example")
+import "github.com/XotoX1337/tinymail"
+
+mailer := tinymail.New(user, password, host)
+msg := tinymail.FromText("attachment example")
 msg.SetFrom("test@tinymail.test")
 msg.SetTo("test.to@tinymail.test")
 msg.SetSubject("TestWriteMessage")
