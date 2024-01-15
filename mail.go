@@ -124,6 +124,5 @@ func (m *mailer) writeMessage() []byte {
 
 		buf.WriteString("--")
 	}
-
 	return []byte(m.chunkMessage(buf.String()))
 }
