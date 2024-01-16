@@ -65,13 +65,13 @@ func (m *mailer) Boundary() string {
 
 // chunk e mail into parts of 998 characters due to
 // RFC5322 2.1.1 Line Length Limits
-func (m *mailer) chunkMessage(message string) string {
+func (m *mailer) chunkString(s string) string {
 	var chunks []string
-	for len(message) > 998 {
-		chunks = append(chunks, message[:998])
-		message = message[998:]
+	for len(s) > 998 {
+		chunks = append(chunks, s[:998])
+		s = s[998:]
 	}
-	chunks = append(chunks, message)
+	chunks = append(chunks, s)
 	return strings.Join(chunks, "\n")
 }
 
@@ -108,7 +108,7 @@ func (m *mailer) writeMessage() []byte {
 
 	}
 	buf.WriteString(fmt.Sprintf("Content-Type: %s\n\n", http.DetectContentType([]byte(msg.Body()))))
-	buf.WriteString(msg.Body())
+	buf.WriteString(m.chunkString(msg.Body()))
 	if withAttachments {
 		for k, v := range msg.Attachments() {
 			buf.WriteString(fmt.Sprintf("\n--%s\n", boundary))
@@ -118,11 +118,11 @@ func (m *mailer) writeMessage() []byte {
 
 			b := make([]byte, base64.StdEncoding.EncodedLen(len(v)))
 			base64.StdEncoding.Encode(b, v)
-			buf.Write(b)
+			buf.Write([]byte(m.chunkString(string(b))))
 			buf.WriteString(fmt.Sprintf("\n--%s", boundary))
 		}
 
 		buf.WriteString("--")
 	}
-	return []byte(m.chunkMessage(buf.String()))
+	return buf.Bytes()
 }
