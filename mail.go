@@ -3,6 +3,7 @@
 package tinymail
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/base64"
 	"fmt"
@@ -63,6 +64,17 @@ func (m *mailer) Boundary() string {
 	return m.boundary
 }
 
+// splits s line by line into RFC5322 compliant chunks
+func (m *mailer) chunkLines(s string) string {
+	scanner := bufio.NewScanner(strings.NewReader(s))
+	var chunkedLines []string
+	for scanner.Scan() {
+		chunkedLines = append(chunkedLines, m.chunkString(scanner.Text()))
+	}
+
+	return strings.Join(chunkedLines, "\n")
+}
+
 // chunk e mail into parts of 998 characters due to
 // RFC5322 2.1.1 Line Length Limits
 func (m *mailer) chunkString(s string) string {
@@ -108,7 +120,7 @@ func (m *mailer) writeMessage() []byte {
 
 	}
 	buf.WriteString(fmt.Sprintf("Content-Type: %s\n\n", http.DetectContentType([]byte(msg.Body()))))
-	buf.WriteString(m.chunkString(msg.Body()))
+	buf.WriteString(m.chunkLines(msg.Body()))
 	if withAttachments {
 		for k, v := range msg.Attachments() {
 			buf.WriteString(fmt.Sprintf("\n--%s\n", boundary))
