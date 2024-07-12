@@ -22,7 +22,13 @@ go get github.com/XotoX1337/tinymail
 ```go
 import "github.com/XotoX1337/tinymail"
 
-mailer := tinymail.New(user, password, host)
+opts := tinymail.MailerOpts{
+    User: "username",
+    Password: "password",
+    Host: "host",
+    Port: 587
+}
+mailer := tinymail.New(opts)
 msg := tinymail.FromText("this is a example")
 msg.SetFrom("test@tinymail.test")
 msg.SetTo("test.to@tinymail.test")
@@ -38,7 +44,13 @@ if err != nil {
 ```go
 import "github.com/XotoX1337/tinymail"
 
-mailer := tinymail.New(user, password, host)
+opts := tinymail.MailerOpts{
+    User: "username",
+    Password: "password",
+    Host: "host",
+    Port: 587
+}
+mailer := tinymail.New(opts)
 msg := tinymail.FromTemplateFile(path/to/template/file)
 msg.SetFrom("test@tinymail.test")
 msg.SetTo("test.to@tinymail.test")
@@ -54,7 +66,13 @@ if err != nil {
 ```go
 import "github.com/XotoX1337/tinymail"
 
-mailer := tinymail.New(user, password, host)
+opts := tinymail.MailerOpts{
+    User: "username",
+    Password: "password",
+    Host: "host",
+    Port: 587
+}
+mailer := tinymail.New(opts)
 msg := tinymail.FromText("attachment example")
 msg.SetFrom("test@tinymail.test")
 msg.SetTo("test.to@tinymail.test")
