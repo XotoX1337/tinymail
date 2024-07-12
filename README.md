@@ -29,7 +29,7 @@ opts := tinymail.MailerOpts{
     Port: 587
 }
 mailer := tinymail.New(opts)
-msg := tinymail.FromText("this is a example")
+msg := tinymail.FromString("this is a example")
 msg.SetFrom("test@tinymail.test")
 msg.SetTo("test.to@tinymail.test")
 msg.SetSubject("TestWriteMessage")
@@ -73,7 +73,7 @@ opts := tinymail.MailerOpts{
     Port: 587
 }
 mailer := tinymail.New(opts)
-msg := tinymail.FromText("attachment example")
+msg := tinymail.FromString("attachment example")
 msg.SetFrom("test@tinymail.test")
 msg.SetTo("test.to@tinymail.test")
 msg.SetSubject("TestWriteMessage")
