@@ -7,6 +7,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var VALID_MAILER_OPTS MailerOpts = MailerOpts{
+	User:     "test",
+	Password: "secret",
+	Host:     "test.com",
+}
+
+var MISSING_USER_MAILER_OPTS MailerOpts = MailerOpts{
+	Password: "secret",
+	Host:     "test.com",
+}
+
+var MISSING_PASSWORD_MAILER_OPTS MailerOpts = MailerOpts{
+	User: "test",
+	Host: "test.com",
+}
+
+var MISSING_HOST_MAILER_OPTS MailerOpts = MailerOpts{
+	User:     "test",
+	Password: "secret",
+}
+
+var CUSTOM_PORT_MAILER_OPTS MailerOpts = MailerOpts{
+	User:     "test",
+	Password: "secret",
+	Host:     "test.com",
+	Port:     123,
+}
+
 func TestWriteMessage(t *testing.T) {
 	assert := assert.New(t)
 
@@ -20,14 +48,18 @@ Content-Type: text/plain; charset=utf-8
 
 this is a test`
 
-	mailer := New("", "", "")
+	mailer, err := New(VALID_MAILER_OPTS)
+	assert.NoError(err)
+
 	msg := FromText("this is a test")
 	msg.SetFrom("test@tinymail.test")
 	msg.SetTo("test.to@tinymail.test")
 	msg.SetSubject("TestWriteMessage")
 	msg.SetCC("test.cc@tinymail.test")
 	msg.SetBCC("test.bcc@tinymail.test")
+
 	mailer.SetMessage(msg)
+
 	assert.Equal(want, string(mailer.writeMessage()))
 }
 
@@ -45,7 +77,9 @@ Content-Type: text/plain; charset=utf-8
 
 this is a test`
 
-	mailer := New("", "", "")
+	mailer, err := New(VALID_MAILER_OPTS)
+	assert.NoError(err)
+
 	msg := FromText("this is a test")
 	msg.SetFrom("test@tinymail.test")
 	msg.SetTo("test.to@tinymail.test")
@@ -53,6 +87,7 @@ this is a test`
 	msg.SetCC("test.cc@tinymail.test")
 	msg.SetBCC("test.bcc@tinymail.test")
 	msg.SetUrgentPriority()
+
 	mailer.SetMessage(msg)
 	assert.Equal(want, string(mailer.writeMessage()))
 }
@@ -83,7 +118,9 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 	os.WriteFile("TestWriteMessageAttach", make([]byte, 512), 0644)
 
-	mailer := New("", "", "")
+	mailer, err := New(VALID_MAILER_OPTS)
+	assert.NoError(err)
+
 	mailer.SetBoundary("7b7f6c9583aae2870247062aac5ca1bc1610b22b627ae2c5366bb1394ed0")
 
 	msg := FromText("this is a test")
@@ -98,4 +135,51 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 	assert.Equal(want, string(mailer.writeMessage()))
 	assert.NoError(os.Remove("TestWriteMessageAttach"))
+}
+
+func TestDefaultPortOpt(t *testing.T) {
+	assert := assert.New(t)
+
+	mailer, err := New(VALID_MAILER_OPTS)
+	assert.NoError(err)
+
+	config := mailer.Config()
+	assert.Equal(DEFAULT_SMTP_PORT, config.port)
+}
+
+func TestMissingUsernameInMailerOpts(t *testing.T) {
+	assert := assert.New(t)
+
+	mailer, err := New(MISSING_USER_MAILER_OPTS)
+
+	assert.Error(err)
+	assert.Nil(mailer)
+}
+
+func TestMissingPasswordInMailerOpts(t *testing.T) {
+	assert := assert.New(t)
+
+	mailer, err := New(MISSING_PASSWORD_MAILER_OPTS)
+
+	assert.Error(err)
+	assert.Nil(mailer)
+}
+
+func TestMissingHostInMailerOpts(t *testing.T) {
+	assert := assert.New(t)
+
+	mailer, err := New(MISSING_HOST_MAILER_OPTS)
+
+	assert.Error(err)
+	assert.Nil(mailer)
+}
+
+func TestCustomPortInMailerOpts(t *testing.T) {
+	assert := assert.New(t)
+
+	mailer, err := New(CUSTOM_PORT_MAILER_OPTS)
+	assert.NoError(err)
+
+	config := mailer.Config()
+	assert.Equal(123, config.port)
 }
