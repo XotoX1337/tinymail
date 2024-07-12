@@ -51,7 +51,7 @@ this is a test`
 	mailer, err := New(VALID_MAILER_OPTS)
 	assert.NoError(err)
 
-	msg := FromText("this is a test")
+	msg := FromString("this is a test")
 	msg.SetFrom("test@tinymail.test")
 	msg.SetTo("test.to@tinymail.test")
 	msg.SetSubject("TestWriteMessage")
@@ -80,7 +80,7 @@ this is a test`
 	mailer, err := New(VALID_MAILER_OPTS)
 	assert.NoError(err)
 
-	msg := FromText("this is a test")
+	msg := FromString("this is a test")
 	msg.SetFrom("test@tinymail.test")
 	msg.SetTo("test.to@tinymail.test")
 	msg.SetSubject("TestWriteMessageUrgent")
@@ -123,7 +123,7 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 	mailer.SetBoundary("7b7f6c9583aae2870247062aac5ca1bc1610b22b627ae2c5366bb1394ed0")
 
-	msg := FromText("this is a test")
+	msg := FromString("this is a test")
 	msg.SetFrom("test@tinymail.test")
 	msg.SetTo("test.to@tinymail.test")
 	msg.SetSubject("TestWriteMessageAttach")

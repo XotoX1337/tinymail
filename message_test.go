@@ -21,9 +21,9 @@ const tplString string = `
 </html>
 `
 
-func TestFromText(t *testing.T) {
+func TestFromString(t *testing.T) {
 	assert := assert.New(t)
-	msg := FromText("this is a test")
+	msg := FromString("this is a test")
 	want := &message{
 		from:        "",
 		to:          []string{},
@@ -76,7 +76,7 @@ func TestAttach(t *testing.T) {
 	assert := assert.New(t)
 	fileName := "test_attach"
 	fileContent := make([]byte, 1024)
-	msg := FromText("TestAttach")
+	msg := FromString("TestAttach")
 	err := os.WriteFile(fileName, fileContent, 0644)
 	assert.NoErrorf(err, "error creating %s", fileName)
 	msg.Attach(fileName)
@@ -121,7 +121,7 @@ func TestAttachMultiple(t *testing.T) {
 		},
 	}
 
-	msg := FromText("TestAttachMultiple")
+	msg := FromString("TestAttachMultiple")
 	msg.Attach(nameFile1, nameFile2, nameFile3)
 
 	assert.Equal(want, msg)
@@ -142,7 +142,7 @@ func TestSetFrom(t *testing.T) {
 		body:        "TestSetFrom",
 		attachments: map[string][]byte{},
 	}
-	msg := FromText("TestSetFrom")
+	msg := FromString("TestSetFrom")
 	msg.SetFrom("test@testing.com")
 	assert.Equal(want, msg)
 	assert.Equal(want.From(), msg.From())
@@ -159,7 +159,7 @@ func TestSetTo(t *testing.T) {
 		body:        "TestSetTo",
 		attachments: map[string][]byte{},
 	}
-	msg := FromText("TestSetTo")
+	msg := FromString("TestSetTo")
 	msg.SetTo("tester@testing.com")
 	assert.Equal(want, msg)
 	assert.Equal([]string{"tester@testing.com"}, msg.To())
@@ -180,7 +180,7 @@ func TestSetToMultiple(t *testing.T) {
 		body:        "TestSetToMultiple",
 		attachments: map[string][]byte{},
 	}
-	msg := FromText("TestSetToMultiple")
+	msg := FromString("TestSetToMultiple")
 	msg.SetTo("tester1@testing.com", "tester2@testing.com")
 	assert.Equal(want, msg)
 
@@ -197,7 +197,7 @@ func TestSetCC(t *testing.T) {
 		body:        "TestSetCC",
 		attachments: map[string][]byte{},
 	}
-	msg := FromText("TestSetCC")
+	msg := FromString("TestSetCC")
 	msg.SetCC("tester@testing.com")
 	assert.Equal(want, msg)
 }
@@ -213,7 +213,7 @@ func TestSetCCMultiple(t *testing.T) {
 		body:        "TestSetCCMultiple",
 		attachments: map[string][]byte{},
 	}
-	msg := FromText("TestSetCCMultiple")
+	msg := FromString("TestSetCCMultiple")
 	msg.SetCC("tester1@testing.com", "tester2@testing.com")
 	assert.Equal(want, msg)
 }
@@ -229,7 +229,7 @@ func TestSetBCC(t *testing.T) {
 		body:        "TestSetBCC",
 		attachments: map[string][]byte{},
 	}
-	msg := FromText("TestSetBCC")
+	msg := FromString("TestSetBCC")
 	msg.SetBCC("tester@testing.com")
 	assert.Equal(want, msg)
 }
@@ -245,7 +245,7 @@ func TestSetBCCMultiple(t *testing.T) {
 		body:        "TestSetBCCMultiple",
 		attachments: map[string][]byte{},
 	}
-	msg := FromText("TestSetBCCMultiple")
+	msg := FromString("TestSetBCCMultiple")
 	msg.SetBCC("tester1@testing.com", "tester2@testing.com")
 	assert.Equal(want, msg)
 }
@@ -261,7 +261,7 @@ func TestSetSubject(t *testing.T) {
 		body:        "TestSetSubject",
 		attachments: map[string][]byte{},
 	}
-	msg := FromText("TestSetSubject")
+	msg := FromString("TestSetSubject")
 	msg.SetSubject("Test")
 	assert.Equal(want, msg)
 }
