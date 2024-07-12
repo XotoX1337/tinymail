@@ -44,6 +44,9 @@ type mailer struct {
 	config   *smtpConfig
 }
 
+// New returns a new Mailer instance
+//
+// Returns an error, if opts could not be validated
 func New(opts MailerOpts) (*mailer, error) {
 	if err := validateMailerOpts(opts); err != nil {
 		return nil, err
@@ -65,6 +68,11 @@ func New(opts MailerOpts) (*mailer, error) {
 	return m, nil
 }
 
+// validateMailerOpts returns an error if
+//
+//   - [MailerOpts.User] is empty
+//   - [MailerOpts.Password] is empty
+//   - [MailerOpts.Host] is empty
 func validateMailerOpts(opts MailerOpts) error {
 	if opts.User == "" {
 		return fmt.Errorf("MailerOpts.User is empty")
@@ -78,24 +86,29 @@ func validateMailerOpts(opts MailerOpts) error {
 	return nil
 }
 
+// Send sends the message with [net/smtp.SendMail]
 func (m *mailer) Send() error {
 	return smtp.SendMail(m.config.addr, m.config.auth, m.config.user, m.message.To(), m.writeMessage())
 }
 
+// SetMessage sets the message
 func (m *mailer) SetMessage(msg Message) *mailer {
 	m.message = msg
 	return m
 }
 
+// SetBoundary sets the boundary string
 func (m *mailer) SetBoundary(boundary string) *mailer {
 	m.boundary = boundary
 	return m
 }
 
+// Boundary returns the boundary string
 func (m *mailer) Boundary() string {
 	return m.boundary
 }
 
+// Config returns the SMTP Config
 func (m *mailer) Config() *smtpConfig {
 	return m.config
 }
@@ -123,6 +136,7 @@ func (m *mailer) chunkString(s string) string {
 	return strings.Join(chunks, "\n")
 }
 
+// writeMessage writes the message
 func (m *mailer) writeMessage() []byte {
 	msg := m.message
 	buf := bytes.NewBuffer(nil)
