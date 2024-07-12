@@ -13,10 +13,20 @@ import (
 	"strings"
 )
 
+const DEFAULT_SMTP_PORT int = 587
+
 type Mailer interface {
 	Send() error
 	SetBoundary(boundary string)
 	Boundary() string
+	Config() *smtpConfig
+}
+
+type MailerOpts struct {
+	User     string
+	Password string
+	Host     string
+	Port     int
 }
 
 type smtpConfig struct {
@@ -25,6 +35,7 @@ type smtpConfig struct {
 	password string
 	host     string
 	addr     string
+	port     int
 }
 
 type mailer struct {
@@ -33,19 +44,40 @@ type mailer struct {
 	config   *smtpConfig
 }
 
-func New(user, password, host string) *mailer {
+func New(opts MailerOpts) (*mailer, error) {
+	if err := validateMailerOpts(opts); err != nil {
+		return nil, err
+	}
+	if opts.Port == 0 {
+		opts.Port = DEFAULT_SMTP_PORT
+	}
 	c := &smtpConfig{
-		user:     user,
-		password: password,
-		host:     host,
-		addr:     fmt.Sprintf("%s:%d", host, 587),
+		user:     opts.User,
+		password: opts.Password,
+		host:     opts.Host,
+		port:     opts.Port,
+		addr:     fmt.Sprintf("%s:%d", opts.Host, opts.Port),
 	}
 	c.auth = smtp.PlainAuth("", c.user, c.password, c.host)
 	m := &mailer{
 		config: c,
 	}
-	return m
+	return m, nil
 }
+
+func validateMailerOpts(opts MailerOpts) error {
+	if opts.User == "" {
+		return fmt.Errorf("MailerOpts.User is empty")
+	}
+	if opts.Password == "" {
+		return fmt.Errorf("MailerOpts.Password is empty")
+	}
+	if opts.Host == "" {
+		return fmt.Errorf("MailerOpts.Host ist empty")
+	}
+	return nil
+}
+
 func (m *mailer) Send() error {
 	return smtp.SendMail(m.config.addr, m.config.auth, m.config.user, m.message.To(), m.writeMessage())
 }
@@ -62,6 +94,10 @@ func (m *mailer) SetBoundary(boundary string) *mailer {
 
 func (m *mailer) Boundary() string {
 	return m.boundary
+}
+
+func (m *mailer) Config() *smtpConfig {
+	return m.config
 }
 
 // splits s line by line into RFC5322 compliant chunks
