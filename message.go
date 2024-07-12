@@ -113,9 +113,9 @@ func (m *message) Priority() string {
 	return m.priority
 }
 
-func FromText(text string) *message {
+func FromString(str string) *message {
 	m := new()
-	m.body = text
+	m.body = str
 	return m
 }
 
