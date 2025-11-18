@@ -5,7 +5,9 @@ package tinymail
 import (
 	"bufio"
 	"bytes"
+	"crypto/tls"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -27,6 +29,7 @@ type MailerOpts struct {
 	Password string
 	Host     string
 	Port     int
+	TLS      bool
 }
 
 type smtpConfig struct {
@@ -36,12 +39,17 @@ type smtpConfig struct {
 	host     string
 	addr     string
 	port     int
+	tls      bool
 }
 
 type mailer struct {
 	message  Message
 	boundary string
 	config   *smtpConfig
+}
+
+type smtpLoginAuth struct {
+	username, password string
 }
 
 // New returns a new Mailer instance
@@ -60,6 +68,7 @@ func New(opts MailerOpts) (*mailer, error) {
 		host:     opts.Host,
 		port:     opts.Port,
 		addr:     fmt.Sprintf("%s:%d", opts.Host, opts.Port),
+		tls:      opts.TLS,
 	}
 	c.auth = smtp.PlainAuth("", c.user, c.password, c.host)
 	m := &mailer{
@@ -88,6 +97,65 @@ func validateMailerOpts(opts MailerOpts) error {
 
 // Send sends the message with [net/smtp.SendMail]
 func (m *mailer) Send() error {
+	if m.config.tls {
+		return m.sendTLS()
+	} else {
+		return m.sendPlain()
+	}
+
+}
+
+func (m *mailer) sendTLS() error {
+	tlsConfig := &tls.Config{
+		ServerName: m.config.host,
+	}
+	c, err := smtp.Dial(m.config.addr)
+	if err != nil {
+		return err
+	}
+
+	if err = c.StartTLS(tlsConfig); err != nil {
+		return err
+	}
+	if ok, auths := c.Extension("AUTH"); ok {
+		if strings.Contains(auths, "LOGIN") &&
+			!strings.Contains(auths, "PLAIN") {
+			m.config.auth = loginAuth(m.config.user, m.config.password)
+		}
+	} else {
+		return errors.New("no authentication method found")
+	}
+
+	if err = c.Auth(m.config.auth); err != nil {
+		return err
+	}
+
+	if err = c.Mail(m.config.user); err != nil {
+		return err
+	}
+
+	for _, rcpt := range m.message.To() {
+		if err = c.Rcpt(rcpt); err != nil {
+			return err
+		}
+	}
+	writer, err := c.Data()
+	if err != nil {
+		return err
+	}
+	_, err = writer.Write(m.writeMessage())
+	if err != nil {
+		return err
+	}
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+
+	return c.Quit()
+}
+
+func (m *mailer) sendPlain() error {
 	return smtp.SendMail(m.config.addr, m.config.auth, m.config.user, m.message.To(), m.writeMessage())
 }
 
@@ -187,4 +255,26 @@ func (m *mailer) writeMessage() []byte {
 		buf.WriteString("--")
 	}
 	return buf.Bytes()
+}
+
+func loginAuth(username, password string) smtp.Auth {
+	return &smtpLoginAuth{username, password}
+}
+
+func (a *smtpLoginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+	return "LOGIN", []byte{}, nil
+}
+
+func (a *smtpLoginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
+	if more {
+		switch string(fromServer) {
+		case "Username:":
+			return []byte(a.username), nil
+		case "Password:":
+			return []byte(a.password), nil
+		default:
+			return nil, errors.New("Unkown fromServer")
+		}
+	}
+	return nil, nil
 }
