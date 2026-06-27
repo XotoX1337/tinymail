@@ -17,6 +17,9 @@ import (
 
 const DEFAULT_SMTP_PORT int = 587
 
+// crlf is the RFC 5322 line separator used throughout the serialized message.
+const crlf = "\r\n"
+
 type Mailer interface {
 	Send() error
 	SetBoundary(boundary string)
@@ -134,7 +137,7 @@ func (m *mailer) sendTLS() error {
 		return err
 	}
 
-	for _, rcpt := range m.message.To() {
+	for _, rcpt := range m.recipients() {
 		if err = c.Rcpt(rcpt); err != nil {
 			return err
 		}
@@ -156,7 +159,18 @@ func (m *mailer) sendTLS() error {
 }
 
 func (m *mailer) sendPlain() error {
-	return smtp.SendMail(m.config.addr, m.config.auth, m.config.user, m.message.To(), m.writeMessage())
+	return smtp.SendMail(m.config.addr, m.config.auth, m.config.user, m.recipients(), m.writeMessage())
+}
+
+// recipients returns every envelope recipient: To, CC and BCC. All of them
+// need a RCPT TO, otherwise CC/BCC recipients never receive the message.
+func (m *mailer) recipients() []string {
+	msg := m.message
+	rcpts := make([]string, 0, len(msg.To())+len(msg.CC())+len(msg.BCC()))
+	rcpts = append(rcpts, msg.To()...)
+	rcpts = append(rcpts, msg.CC()...)
+	rcpts = append(rcpts, msg.BCC()...)
+	return rcpts
 }
 
 // SetMessage sets the message
@@ -189,7 +203,7 @@ func (m *mailer) chunkLines(s string) string {
 		chunkedLines = append(chunkedLines, m.chunkString(scanner.Text()))
 	}
 
-	return strings.Join(chunkedLines, "\n")
+	return strings.Join(chunkedLines, crlf)
 }
 
 // chunk e mail into parts of 998 characters due to
@@ -201,58 +215,59 @@ func (m *mailer) chunkString(s string) string {
 		s = s[998:]
 	}
 	chunks = append(chunks, s)
-	return strings.Join(chunks, "\n")
+	return strings.Join(chunks, crlf)
 }
 
-// writeMessage writes the message
+// sanitizeHeader strips CR and LF from a header value to prevent header
+// injection (an attacker-controlled value breaking out into new headers).
+func sanitizeHeader(s string) string {
+	return strings.NewReplacer("\r", "", "\n", "").Replace(s)
+}
+
+// writeMessage serializes the message into RFC 5322 / MIME wire format.
 func (m *mailer) writeMessage() []byte {
 	msg := m.message
 	buf := bytes.NewBuffer(nil)
-	buf.WriteString("MIME-Version: 1.0\n")
 	withAttachments := len(msg.Attachments()) > 0
-	buf.WriteString(fmt.Sprintf("From: %s\n", msg.From()))
-	buf.WriteString(fmt.Sprintf("To: %s\n", strings.Join(msg.To(), ",")))
-	buf.WriteString(fmt.Sprintf("Subject: %s\n", msg.Subject()))
+
+	buf.WriteString("MIME-Version: 1.0" + crlf)
+	buf.WriteString(fmt.Sprintf("From: %s%s", sanitizeHeader(msg.From()), crlf))
+	buf.WriteString(fmt.Sprintf("To: %s%s", sanitizeHeader(strings.Join(msg.To(), ",")), crlf))
+	buf.WriteString(fmt.Sprintf("Subject: %s%s", sanitizeHeader(msg.Subject()), crlf))
 	if len(msg.CC()) > 0 {
-		buf.WriteString(fmt.Sprintf("Cc: %s\n", strings.Join(msg.CC(), ",")))
+		buf.WriteString(fmt.Sprintf("Cc: %s%s", sanitizeHeader(strings.Join(msg.CC(), ",")), crlf))
 	}
-
-	if len(msg.BCC()) > 0 {
-		buf.WriteString(fmt.Sprintf("Bcc: %s\n", strings.Join(msg.BCC(), ",")))
-	}
+	// Bcc is intentionally omitted from the headers: blind recipients must not
+	// be visible to anyone. They are delivered via the SMTP envelope only.
 	if len(msg.Priority()) > 0 {
-		buf.WriteString(fmt.Sprintf("Priority: %s\n", msg.Priority()))
+		buf.WriteString(fmt.Sprintf("Priority: %s%s", sanitizeHeader(msg.Priority()), crlf))
 	}
 
-	writer := multipart.NewWriter(buf)
 	var boundary string
-	if len(m.boundary) > 0 {
+	if withAttachments {
 		boundary = m.boundary
-	} else {
-		boundary = writer.Boundary()
-	}
-
-	if withAttachments {
-		buf.WriteString(fmt.Sprintf("Content-Type: multipart/mixed;\n boundary=%s\n\n", boundary))
-		buf.WriteString(fmt.Sprintf("--%s\n", boundary))
-
-	}
-	buf.WriteString(fmt.Sprintf("Content-Type: %s\n\n", http.DetectContentType([]byte(msg.Body()))))
-	buf.WriteString(m.chunkLines(msg.Body()))
-	if withAttachments {
-		for k, v := range msg.Attachments() {
-			buf.WriteString(fmt.Sprintf("\n--%s\n", boundary))
-			buf.WriteString(fmt.Sprintf("Content-Type: %s\n", http.DetectContentType(v)))
-			buf.WriteString("Content-Transfer-Encoding: base64\n")
-			buf.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=%s\n\n", k))
-
-			b := make([]byte, base64.StdEncoding.EncodedLen(len(v)))
-			base64.StdEncoding.Encode(b, v)
-			buf.Write([]byte(m.chunkString(string(b))))
-			buf.WriteString(fmt.Sprintf("\n--%s", boundary))
+		if boundary == "" {
+			boundary = multipart.NewWriter(buf).Boundary()
 		}
+		buf.WriteString(fmt.Sprintf("Content-Type: multipart/mixed;%s boundary=%s%s%s", crlf, boundary, crlf, crlf))
+		buf.WriteString(fmt.Sprintf("--%s%s", boundary, crlf))
+	}
 
-		buf.WriteString("--")
+	buf.WriteString(fmt.Sprintf("Content-Type: %s%s%s", http.DetectContentType([]byte(msg.Body())), crlf, crlf))
+	buf.WriteString(m.chunkLines(msg.Body()))
+
+	if withAttachments {
+		for name, content := range msg.Attachments() {
+			buf.WriteString(fmt.Sprintf("%s--%s%s", crlf, boundary, crlf))
+			buf.WriteString(fmt.Sprintf("Content-Type: %s%s", http.DetectContentType(content), crlf))
+			buf.WriteString("Content-Transfer-Encoding: base64" + crlf)
+			buf.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=%s%s%s", sanitizeHeader(name), crlf, crlf))
+
+			b := make([]byte, base64.StdEncoding.EncodedLen(len(content)))
+			base64.StdEncoding.Encode(b, content)
+			buf.Write([]byte(m.chunkString(string(b))))
+		}
+		buf.WriteString(fmt.Sprintf("%s--%s--", crlf, boundary))
 	}
 	return buf.Bytes()
 }
@@ -262,19 +277,24 @@ func loginAuth(username, password string) smtp.Auth {
 }
 
 func (a *smtpLoginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
-	return "LOGIN", []byte{}, nil
+	if !server.TLS {
+		return "", nil, errors.New("tinymail: refusing to send LOGIN credentials over an unencrypted connection")
+	}
+	return "LOGIN", nil, nil
 }
 
 func (a *smtpLoginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
-	if more {
-		switch string(fromServer) {
-		case "Username:":
-			return []byte(a.username), nil
-		case "Password:":
-			return []byte(a.password), nil
-		default:
-			return nil, errors.New("Unkown fromServer")
-		}
+	if !more {
+		return nil, nil
 	}
-	return nil, nil
+	// Servers phrase the challenge differently ("Username:", "username", ...);
+	// normalize before matching.
+	switch strings.ToLower(strings.TrimRight(strings.TrimSpace(string(fromServer)), ":")) {
+	case "username":
+		return []byte(a.username), nil
+	case "password":
+		return []byte(a.password), nil
+	default:
+		return nil, fmt.Errorf("tinymail: unexpected LOGIN challenge %q", fromServer)
+	}
 }
