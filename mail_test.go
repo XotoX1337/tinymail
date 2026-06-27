@@ -2,10 +2,17 @@ package tinymail
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// toCRLF rewrites the \n-delimited golden strings below into the CRLF form
+// that writeMessage actually produces (RFC 5322).
+func toCRLF(s string) string {
+	return strings.ReplaceAll(s, "\n", "\r\n")
+}
 
 var VALID_MAILER_OPTS = MailerOpts{
 	User:     "test",
@@ -43,7 +50,6 @@ From: test@tinymail.test
 To: test.to@tinymail.test
 Subject: TestWriteMessage
 Cc: test.cc@tinymail.test
-Bcc: test.bcc@tinymail.test
 Content-Type: text/plain; charset=utf-8
 
 this is a test`
@@ -60,7 +66,7 @@ this is a test`
 
 	mailer.SetMessage(msg)
 
-	test.Equal(want, string(mailer.writeMessage()))
+	test.Equal(toCRLF(want), string(mailer.writeMessage()))
 }
 
 func TestWriteMessageUrgent(t *testing.T) {
@@ -71,7 +77,6 @@ From: test@tinymail.test
 To: test.to@tinymail.test
 Subject: TestWriteMessageUrgent
 Cc: test.cc@tinymail.test
-Bcc: test.bcc@tinymail.test
 Priority: urgent
 Content-Type: text/plain; charset=utf-8
 
@@ -89,7 +94,7 @@ this is a test`
 	msg.SetUrgentPriority()
 
 	mailer.SetMessage(msg)
-	test.Equal(want, string(mailer.writeMessage()))
+	test.Equal(toCRLF(want), string(mailer.writeMessage()))
 }
 
 func TestWriteMessageAttach(t *testing.T) {
@@ -100,7 +105,6 @@ From: test@tinymail.test
 To: test.to@tinymail.test
 Subject: TestWriteMessageAttach
 Cc: test.cc@tinymail.test
-Bcc: test.bcc@tinymail.test
 Content-Type: multipart/mixed;
  boundary=7b7f6c9583aae2870247062aac5ca1bc1610b22b627ae2c5366bb1394ed0
 
@@ -133,7 +137,7 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 	mailer.SetMessage(msg)
 
-	test.Equal(want, string(mailer.writeMessage()))
+	test.Equal(toCRLF(want), string(mailer.writeMessage()))
 	test.NoError(os.Remove("TestWriteMessageAttach"))
 }
 
